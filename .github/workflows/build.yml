@@ -36,7 +36,7 @@ jobs:
       shell: cmd
     
     - name: Upload
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4.4.3
       with:
         name: Install
         path: DittoSetup\Output\DittoSetup.exe
