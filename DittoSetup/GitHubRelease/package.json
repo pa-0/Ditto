@@ -9,7 +9,7 @@
   "author": "scott brogden",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.6.2",
+    "axios": "^1.7.4",
     "fs": "^0.0.1-security"
   }
 }
