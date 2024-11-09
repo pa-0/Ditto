@@ -18,7 +18,7 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-#define ROW_BOTTOM_BORDER		2
+#define ROW_BOTTOM_BORDER		4
 #define ROW_LEFT_BORDER			3
 #define COLOR_SHADOW			RGB(245, 245, 245)
 #define DUMMY_COL_WIDTH			2
@@ -348,8 +348,9 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 		nOldBKMode = pDC->SetBkMode(TRANSPARENT);
 
 		CRect rcText = rcItem;
-		rcText.left += ROW_LEFT_BORDER;
-		rcText.top++;
+		rcText.left += m_windowDpi->Scale(ROW_LEFT_BORDER);
+		rcText.top += m_windowDpi->Scale(1);
+		rcText.bottom -= m_windowDpi->Scale(1);
 
 		if (m_showIfClipWasPasted &&
 			strSymbols.GetLength() > 0 &&
@@ -357,11 +358,9 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 		{
 			CRect pastedRect(rcItem);
 			pastedRect.left++;
-			pastedRect.right = rcItem.left + m_windowDpi->Scale(3);
+			pastedRect.right = pastedRect.left + m_windowDpi->Scale(2);
 
 			pDC->FillSolidRect(pastedRect, g_Opt.m_Theme.ClipPastedColor());
-
-			rcText.left += m_windowDpi->Scale(4);
 		}
 
 		// set firstTenNum to the first ten number (1-10) corresponding to
@@ -373,6 +372,10 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 		{
 			rcText.left += m_windowDpi->Scale(12);
 		}
+		else
+		{
+			rcText.left += m_windowDpi->Scale(3);
+		}
 
 		bool drawInGroupIcon = true;
 		// if we are inside a group, don't display the "in group" flag
@@ -382,6 +385,8 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			if (nFlag >= 0)
 				drawInGroupIcon = false;
 		}
+
+		DrawCopiedColorCode(csText, rcText, pDC);
 
 		DrawBitMap(nItem, rcText, pDC, csText);
 
@@ -485,6 +490,60 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			pDC->SetBkMode(nOldBKMode);
 
 		*pResult = CDRF_SKIPDEFAULT;    // We've painted everything.
+	}
+}
+
+void CQListCtrl::DrawCopiedColorCode(CString& csText, CRect& rcText, CDC* pDC)
+{
+	if (g_Opt.m_bDrawCopiedColorCode == FALSE)
+		return;
+
+	CString trimmedText = CString(csText).Trim(L'»').Trim().Trim('#');
+
+	//draw hex color copied like #FF0000, FF0000, FF0000 other text with a space before other text
+	if (trimmedText.GetLength() == 6 ||
+		trimmedText.Find(' ') == 6)
+	{
+		int r, g, b;
+		int scanRet = swscanf(trimmedText, _T("%02x%02x%02x"), &r, &g, &b);
+		if (scanRet == 3)
+		{
+			CRect pastedRect(rcText);
+			pastedRect.right = pastedRect.left + m_windowDpi->Scale(rcText.Height());
+
+			pDC->FillSolidRect(pastedRect, COLORREF(RGB(r, g, b)));
+
+			rcText.left += m_windowDpi->Scale(rcText.Height());
+			rcText.left += m_windowDpi->Scale(ROW_LEFT_BORDER);
+		}
+	}
+
+	// draw rgb color copied like 255,0,0 and rgb(255,0,0)
+	int firstCommaPos = trimmedText.Find(',');
+	if (firstCommaPos >= 0)
+	{
+		int secondCommaPos = trimmedText.Find(',', firstCommaPos+1);
+		if (secondCommaPos)
+		{
+			int noThirdCommaPos = trimmedText.Find(',', secondCommaPos+1);
+			
+			if (noThirdCommaPos < 0)
+			{
+				int r, g, b;
+				CString noRGB = trimmedText.MakeLower().Trim(_T("rgb(")).Trim(')');
+				int scanRet = swscanf(noRGB, _T("%d,%d,%d"), &r, &g, &b);
+				if (scanRet == 3)
+				{
+					CRect pastedRect(rcText);
+					pastedRect.right = pastedRect.left + m_windowDpi->Scale(rcText.Height());
+
+					pDC->FillSolidRect(pastedRect, COLORREF(RGB(r, g, b)));
+
+					rcText.left += m_windowDpi->Scale(rcText.Height());
+					rcText.left += m_windowDpi->Scale(ROW_LEFT_BORDER);
+				}
+			}
+		}
 	}
 }
 
